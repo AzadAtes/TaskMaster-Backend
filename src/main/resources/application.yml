@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: taskmaster-backend
+  datasource:
+      url: jdbc:mariadb://localhost:3306/taskmaster
+      username: user
+      password: password
+  jpa:
+    hibernate:
+      ddl-auto: none # Flyway will manage schema changes
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    url: jdbc:mariadb://localhost:3306/taskmaster
+    user: user
+    password: password
+    connectRetries: 10
+    encoding: UTF-8
+    baseline-on-migrate: true
+
+
