@@ -3,10 +3,10 @@ package com.az.taskmasterbackend.controller;
 import com.az.taskmasterbackend.entity.Task;
 import com.az.taskmasterbackend.service.TaskService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/tasks")
@@ -17,17 +17,19 @@ public class TaskController {
     private final TaskService taskService;
 
     @PostMapping
-    public Task createTask(@RequestBody Task task) {
-        return taskService.createTask(task);
+    public ResponseEntity<Task> createTask(@RequestBody Task task) {
+        return ResponseEntity.ok(taskService.createTask(task));
     }
 
     @GetMapping("/{id}")
-    public Optional<Task> getTaskById(@PathVariable String id) {
-        return taskService.getTask(id);
+    public ResponseEntity<Task> getTaskById(@PathVariable String id) {
+        return taskService.getTask(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping
-    public List<Task> getAllTasks() {
-        return taskService.getAllTasks();
+    public ResponseEntity<List<Task>> getAllTasks() {
+        return ResponseEntity.ok(taskService.getAllTasks());
     }
 }
