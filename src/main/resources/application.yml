@@ -17,5 +17,7 @@ spring:
     connectRetries: 10
     encoding: UTF-8
     baseline-on-migrate: true
-
+cors:
+  allowed:
+    origins: http://localhost:5173
 

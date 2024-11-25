@@ -11,6 +11,7 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/tasks")
 @RequiredArgsConstructor
+@CrossOrigin(origins = "${cors.allowed.origins}")
 public class TaskController {
 
     private final TaskService taskService;
