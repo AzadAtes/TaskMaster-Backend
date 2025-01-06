@@ -17,7 +17,12 @@ spring:
     connectRetries: 10
     encoding: UTF-8
     baseline-on-migrate: true
-cors:
-  allowed:
-    origins: http://localhost:5173
+security:
+  jwt:
+    secret: w4vjmZlJSat95OPwx1BCwLp6T3vNbhZJuH6EPZtbL+k=
+    expiration-ms: 3600000
+    refresh-expiration-ms: 7200000
+
+
+
 
