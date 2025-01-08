@@ -29,7 +29,7 @@ public class JwtUtil {
     private String jwtSecret;
 
     @Value("${security.jwt.expiration-ms}")
-    private String jwtExpirationInMs;
+    private Long jwtExpirationInMs;
 
     @Value("${security.jwt.refresh-expiration-ms}")
     private Long jwtRefreshExpirationInMs;
@@ -60,7 +60,7 @@ public class JwtUtil {
     public String generateRefreshToken(String username) {
 
         Date now = new Date();
-        Date expirationDate = new Date(now.getTime() + jwtExpirationInMs);
+        Date expirationDate = new Date(now.getTime() + jwtRefreshExpirationInMs);
 
         return Jwts.builder()
                 .subject(username)
@@ -77,6 +77,7 @@ public class JwtUtil {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+        System.out.println("SUBJECT: " + claims.getSubject());
         return claims.getSubject();
     }
 

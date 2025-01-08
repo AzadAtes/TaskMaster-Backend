@@ -11,8 +11,10 @@ import com.az.taskmasterbackend.util.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -28,14 +30,18 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AuthService {
 
+    @Autowired
     private AuthenticationManager authenticationManager;
+
+    @Autowired
     private JwtUtil jwtUtil;
 //    private CustomUserDetailsService customUserDetailsService;
 //    private ObjectMapper objectMapper;
+    @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
     public ResponseEntity<?> login(AuthRequest authRequest) {
-
+        System.out.println("AUTHREQUEST:\n" + authRequest);
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(authRequest.username(), authRequest.password()));

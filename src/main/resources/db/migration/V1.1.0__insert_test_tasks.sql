@@ -1,5 +1,3 @@
--- V1.1__insert_test_tasks.sql
-
 -- Insert main tasks
 INSERT INTO tasks (id, name, description) VALUES ('1', 'Main Task 1', 'Description for Main Task 1');
 INSERT INTO tasks (id, name, description) VALUES ('2', 'Main Task 2', 'Description for Main Task 2');
