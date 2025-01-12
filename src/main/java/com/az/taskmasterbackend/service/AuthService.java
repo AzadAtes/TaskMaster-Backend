@@ -7,18 +7,18 @@ import com.az.taskmasterbackend.dto.RefreshTokenRequest;
 import com.az.taskmasterbackend.entity.RefreshToken;
 import com.az.taskmasterbackend.entity.User;
 import com.az.taskmasterbackend.repository.RefreshTokenRepository;
-import com.az.taskmasterbackend.util.JwtUtil;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.az.taskmasterbackend.repository.UserRepository;
+import com.az.taskmasterbackend.utility.JwtUtility;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.antlr.v4.runtime.misc.LogManager;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -30,35 +30,30 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class AuthService {
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
-
-    @Autowired
-    private JwtUtil jwtUtil;
-//    private CustomUserDetailsService customUserDetailsService;
-//    private ObjectMapper objectMapper;
-    @Autowired
-    private RefreshTokenRepository refreshTokenRepository;
+    private final AuthenticationManager authenticationManager;
+    private final JwtUtility jwtUtility;
+    private final RefreshTokenRepository refreshTokenRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     public ResponseEntity<?> login(AuthRequest authRequest) {
-        System.out.println("AUTHREQUEST:\n" + authRequest);
+
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(authRequest.username(), authRequest.password()));
 
             System.out.println(authRequest.password());
             User userDetails = (User) authentication.getPrincipal();
-            String jwt = jwtUtil.generateToken(authentication);
+            String jwt = jwtUtility.generateToken(authentication);
 
-            String refreshToken = jwtUtil.generateRefreshToken(userDetails.getUsername());
+            String refreshToken = jwtUtility.generateRefreshToken(userDetails.getUsername());
             RefreshToken refreshTokenEntity = new RefreshToken(
                     refreshToken,
-                    Date.from(Instant.now().plusMillis(jwtUtil.getRefreshExpirationInMs())),
+                    Date.from(Instant.now().plusMillis(jwtUtility.getRefreshExpirationInMs())),
                     userDetails
             );
 
             refreshTokenRepository.save(refreshTokenEntity);
-
             return ResponseEntity.ok(new AuthResponse(jwt, refreshToken));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(""));
@@ -76,13 +71,13 @@ public class AuthService {
             RefreshToken validRefreshToken = refreshTokenFromDb.get();
             User userDetails = validRefreshToken.getUser();
 
-            String newJwt = jwtUtil.generateToken(new UsernamePasswordAuthenticationToken(
+            String newJwt = jwtUtility.generateToken(new UsernamePasswordAuthenticationToken(
                     userDetails, null, userDetails.getAuthorities()));
 
-            String newRefreshToken = jwtUtil.generateRefreshToken(userDetails.getUsername());
+            String newRefreshToken = jwtUtility.generateRefreshToken(userDetails.getUsername());
 
             validRefreshToken.setToken(newRefreshToken);
-            validRefreshToken.setExpirationDate(Date.from(Instant.now().plusMillis(jwtUtil.getRefreshExpirationInMs())));
+            validRefreshToken.setExpirationDate(Date.from(Instant.now().plusMillis(jwtUtility.getRefreshExpirationInMs())));
 
             refreshTokenRepository.save(validRefreshToken);
 
@@ -97,7 +92,7 @@ public class AuthService {
             String authHeader = httpServletRequest.getHeader("Authorization");
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String jwt = authHeader.substring(7);
-                String username = jwtUtil.getUsernameFromToken(jwt);
+                String username = jwtUtility.getUsernameFromToken(jwt);
 
                 List<RefreshToken> refreshTokens = refreshTokenRepository.findAllByUser_Username(username);
                 for (RefreshToken refreshToken : refreshTokens) {
@@ -109,6 +104,18 @@ public class AuthService {
             return ResponseEntity.ok("Logged out successfully.");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("Logout failed."));
+        }
+    }
+
+    public ResponseEntity<?> register(AuthRequest authRequest) {
+        try {
+            User user = new User();
+            user.setUsername(authRequest.username());
+            user.setPassword(passwordEncoder.encode(authRequest.password()));
+            user = userRepository.save(user);
+            return ResponseEntity.ok(user);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("User already exists"));
         }
     }
 }

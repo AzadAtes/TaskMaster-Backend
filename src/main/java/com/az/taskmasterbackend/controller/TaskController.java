@@ -2,7 +2,6 @@ package com.az.taskmasterbackend.controller;
 
 import com.az.taskmasterbackend.entity.Task;
 import com.az.taskmasterbackend.service.TaskService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,7 +9,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/tasks")
-@CrossOrigin(origins = "${cors.allowed.origins}")
 public class TaskController {
 
     private final TaskService taskService;

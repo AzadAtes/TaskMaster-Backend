@@ -1,4 +1,4 @@
-package com.az.taskmasterbackend.util;
+package com.az.taskmasterbackend.utility;
 
 import io.jsonwebtoken.*;
 import jakarta.annotation.PostConstruct;
@@ -13,7 +13,6 @@ import java.security.Key;
 import io.jsonwebtoken.security.Keys;
 
 import javax.crypto.SecretKey;
-import java.security.SignatureException;
 import java.util.Base64;
 import java.util.Date;
 import java.util.Map;
@@ -21,9 +20,9 @@ import java.util.stream.Collectors;
 
 
 @Component
-public class JwtUtil {
+public class JwtUtility {
 
-    private static final Logger logger = LoggerFactory.getLogger(JwtUtil.class);
+    private static final Logger logger = LoggerFactory.getLogger(JwtUtility.class);
 
     @Value("${security.jwt.secret}")
     private String jwtSecret;
@@ -49,11 +48,11 @@ public class JwtUtil {
         Date expirationDate = new Date(now.getTime() + jwtExpirationInMs);
 
         return Jwts.builder()
-                .setSubject(username)
-                .setIssuedAt(now)
-                .setExpiration(expirationDate)
+                .subject(username)
+                .issuedAt(now)
+                .expiration(expirationDate)
+                .claims(Map.of("roles", authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList())))
                 .signWith(key)
-                .setClaims(Map.of("roles", authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList())))
                 .compact();
     }
 
@@ -77,7 +76,6 @@ public class JwtUtil {
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
-        System.out.println("SUBJECT: " + claims.getSubject());
         return claims.getSubject();
     }
 
@@ -88,8 +86,6 @@ public class JwtUtil {
                     .build()
                     .parseSignedClaims(token);
             return true;
-//        } catch (SignatureException e) {
-//            logger.error("Invalid JWT signature: {}", e.getMessage());
         } catch (MalformedJwtException e) {
             logger.error("Invalid JWT token: {}", e.getMessage());
         } catch (ExpiredJwtException e) {

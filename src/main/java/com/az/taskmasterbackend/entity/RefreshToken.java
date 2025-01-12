@@ -1,8 +1,12 @@
 package com.az.taskmasterbackend.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import java.util.Date;
 
+@NoArgsConstructor
+@Data
 @Entity
 @Table(name = "refresh_token")
 public class RefreshToken {
@@ -20,49 +24,13 @@ public class RefreshToken {
     @Column(nullable = false)
     private boolean revoked;
 
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
-
-    public Date getExpirationDate() {
-        return expirationDate;
-    }
-
-    public void setExpirationDate(Date expirationDate) {
-        this.expirationDate = expirationDate;
-    }
-
-    public boolean isRevoked() {
-        return revoked;
-    }
-
-    public void setRevoked(boolean revoked) {
-        this.revoked = revoked;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
-
-    public RefreshToken() {}
 
     public RefreshToken(String refreshToken, Date expirationDate, User user) {
         this.token = refreshToken;
         this.expirationDate = expirationDate;
         this.user = user;
     }
-
-
 }

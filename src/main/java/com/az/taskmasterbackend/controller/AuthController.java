@@ -20,19 +20,23 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
-    @PostMapping("login")
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody AuthRequest authRequest) {
+        return authService.register(authRequest);
+    }
+
+    @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest authRequest) {
-        System.out.println("AUTHREQUEST:\n" + authRequest);
         return authService.login(authRequest);
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<?> refreshToken(RefreshTokenRequest refreshTokenRequest) {
+    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest refreshTokenRequest) {
         return authService.refreshToken(refreshTokenRequest);
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> login(HttpServletRequest httpServletRequest) {
+    public ResponseEntity<?> logout(HttpServletRequest httpServletRequest) {
         return authService.logout(httpServletRequest);
     }
 }
