@@ -1,4 +1,4 @@
-package com.az.taskmasterbackend.entity;
+package com.az.taskmasterbackend.model.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;

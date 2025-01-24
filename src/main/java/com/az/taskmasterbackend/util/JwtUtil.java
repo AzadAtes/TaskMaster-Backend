@@ -1,4 +1,4 @@
-package com.az.taskmasterbackend.utility;
+package com.az.taskmasterbackend.util;
 
 import io.jsonwebtoken.*;
 import jakarta.annotation.PostConstruct;
@@ -20,9 +20,9 @@ import java.util.stream.Collectors;
 
 
 @Component
-public class JwtUtility {
+public class JwtUtil {
 
-    private static final Logger logger = LoggerFactory.getLogger(JwtUtility.class);
+    private static final Logger logger = LoggerFactory.getLogger(JwtUtil.class);
 
     @Value("${security.jwt.secret}")
     private String jwtSecret;

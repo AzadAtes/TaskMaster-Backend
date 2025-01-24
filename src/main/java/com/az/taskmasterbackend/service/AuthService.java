@@ -1,14 +1,14 @@
 package com.az.taskmasterbackend.service;
 
-import com.az.taskmasterbackend.dto.AuthRequest;
-import com.az.taskmasterbackend.dto.AuthResponse;
-import com.az.taskmasterbackend.dto.ErrorResponse;
-import com.az.taskmasterbackend.dto.RefreshTokenRequest;
-import com.az.taskmasterbackend.entity.RefreshToken;
-import com.az.taskmasterbackend.entity.User;
+import com.az.taskmasterbackend.model.dto.AuthRequest;
+import com.az.taskmasterbackend.model.dto.AuthResponse;
+import com.az.taskmasterbackend.model.dto.ErrorResponse;
+import com.az.taskmasterbackend.model.dto.RefreshTokenRequest;
+import com.az.taskmasterbackend.model.entity.RefreshToken;
+import com.az.taskmasterbackend.model.entity.User;
 import com.az.taskmasterbackend.repository.RefreshTokenRepository;
 import com.az.taskmasterbackend.repository.UserRepository;
-import com.az.taskmasterbackend.utility.JwtUtility;
+import com.az.taskmasterbackend.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,7 +20,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.security.InvalidParameterException;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
@@ -31,7 +30,7 @@ import java.util.Optional;
 public class AuthService {
 
     private final AuthenticationManager authenticationManager;
-    private final JwtUtility jwtUtility;
+    private final JwtUtil jwtUtil;
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -43,12 +42,12 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(authRequest.email(), authRequest.password()));
 
         User userDetails = (User) authentication.getPrincipal();
-        String jwt = jwtUtility.generateToken(authentication);
+        String jwt = jwtUtil.generateToken(authentication);
 
-        String refreshToken = jwtUtility.generateRefreshToken(userDetails.getUsername());
+        String refreshToken = jwtUtil.generateRefreshToken(userDetails.getUsername());
         RefreshToken refreshTokenEntity = new RefreshToken(
                 refreshToken,
-                Date.from(Instant.now().plusMillis(jwtUtility.getRefreshExpirationInMs())),
+                Date.from(Instant.now().plusMillis(jwtUtil.getRefreshExpirationInMs())),
                 userDetails
         );
 
@@ -69,13 +68,13 @@ public class AuthService {
         RefreshToken validRefreshToken = refreshTokenFromDb.get();
         User userDetails = validRefreshToken.getUser();
 
-        String newJwt = jwtUtility.generateToken(new UsernamePasswordAuthenticationToken(
+        String newJwt = jwtUtil.generateToken(new UsernamePasswordAuthenticationToken(
                 userDetails, null, userDetails.getAuthorities()));
 
-        String newRefreshToken = jwtUtility.generateRefreshToken(userDetails.getUsername());
+        String newRefreshToken = jwtUtil.generateRefreshToken(userDetails.getUsername());
 
         validRefreshToken.setToken(newRefreshToken);
-        validRefreshToken.setExpirationDate(Date.from(Instant.now().plusMillis(jwtUtility.getRefreshExpirationInMs())));
+        validRefreshToken.setExpirationDate(Date.from(Instant.now().plusMillis(jwtUtil.getRefreshExpirationInMs())));
 
         refreshTokenRepository.save(validRefreshToken);
 
@@ -87,7 +86,7 @@ public class AuthService {
             String authHeader = httpServletRequest.getHeader("Authorization");
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 String jwt = authHeader.substring(7);
-                String username = jwtUtility.getUsernameFromToken(jwt);
+                String username = jwtUtil.getUsernameFromToken(jwt);
 
                 List<RefreshToken> refreshTokens = refreshTokenRepository.findAllByUser_Username(username);
                 for (RefreshToken refreshToken : refreshTokens) {

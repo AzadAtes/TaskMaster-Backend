@@ -1,12 +1,11 @@
 package com.az.taskmasterbackend.service;
 
-import com.az.taskmasterbackend.entity.Task;
+import com.az.taskmasterbackend.model.entity.Task;
 import com.az.taskmasterbackend.repository.TaskRepository;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,8 +19,8 @@ public class TaskService {
 
     public Task createTask(Task task) {
 
-        Optional<Task> newTask = taskRepository.findById(task.getId());
-        if (newTask.isEmpty()) {
+        Optional<Task> existingTask = taskRepository.findById(task.getId());
+        if (existingTask.isEmpty()) {
             return taskRepository.save(task);
         } else {
             throw new IllegalArgumentException("Task already exists");

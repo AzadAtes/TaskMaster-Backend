@@ -1,6 +1,6 @@
 package com.az.taskmasterbackend;
 
-import com.az.taskmasterbackend.entity.Task;
+import com.az.taskmasterbackend.model.entity.Task;
 import com.az.taskmasterbackend.testutils.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import java.util.List;

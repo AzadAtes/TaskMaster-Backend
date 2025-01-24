@@ -1,7 +1,7 @@
-package com.az.taskmasterbackend.filter;
+package com.az.taskmasterbackend.config.filter;
 
 import com.az.taskmasterbackend.service.CustomUserDetailsService;
-import com.az.taskmasterbackend.utility.JwtUtility;
+import com.az.taskmasterbackend.util.JwtUtil;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,30 +14,25 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
-
 import java.io.IOException;
 
 @RequiredArgsConstructor
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtUtility jwtUtility;
+    private final JwtUtil jwtUtil;
     private final CustomUserDetailsService customUserDetailsService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String jwt = getJwtFromRequest(request);
-        if (StringUtils.hasText(jwt) && jwtUtility.validateToken(jwt)) {
-            String username = jwtUtility.getUsernameFromToken(jwt);
-
-            UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
-            UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+        if (jwt != null && jwtUtil.validateToken(jwt)) {
+            UserDetails userDetails = customUserDetailsService
+                    .loadUserByUsername(jwtUtil.getUsernameFromToken(jwt));
+            UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                     userDetails, null, userDetails.getAuthorities());
-
-            SecurityContextHolder.getContext().setAuthentication(authentication);
-            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-        } else {
-            logger.error("NO JWT TOKEN FOUND");
+            auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            SecurityContextHolder.getContext().setAuthentication(auth);
         }
         filterChain.doFilter(request, response);
     }

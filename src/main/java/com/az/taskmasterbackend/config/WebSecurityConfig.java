@@ -1,12 +1,11 @@
 package com.az.taskmasterbackend.config;
 
-import com.az.taskmasterbackend.filter.JwtAuthenticationEntryPoint;
-import com.az.taskmasterbackend.filter.JwtAuthenticationFilter;
+import com.az.taskmasterbackend.config.filter.JwtAuthenticationEntryPoint;
+import com.az.taskmasterbackend.config.filter.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -16,10 +15,11 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
-import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.List;
+
+import static org.springframework.security.config.Customizer.withDefaults;
 
 @RequiredArgsConstructor
 @Configuration
@@ -44,12 +44,14 @@ public class WebSecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests((authorize) ->authorize
-//                        .requestMatchers("/test/secured").hasRole("ADMIN")
-                        .requestMatchers("/api/auth/register", "/api/auth/login", "api/auth/refresh").permitAll()
-                        .anyRequest().authenticated()
+//                    .requestMatchers("/test/secured").hasRole("ADMIN")
+                    .requestMatchers("/api/auth/register", "api/auth/refresh").permitAll()
+                    .requestMatchers("/api/auth/login").authenticated()
+                    .anyRequest().authenticated()
                 )
+                .httpBasic(withDefaults())
                 .addFilterBefore(jwtAuthenticationFilter, BasicAuthenticationFilter.class)
-//                .exceptionHandling((httpSecurityExceptionHandlingConfigurer) -> httpSecurityExceptionHandlingConfigurer.authenticationEntryPoint(jwtAuthenticationEntryPoint))
+                .exceptionHandling((httpSecurityExceptionHandlingConfigurer) -> httpSecurityExceptionHandlingConfigurer.authenticationEntryPoint(jwtAuthenticationEntryPoint))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .build();
     }

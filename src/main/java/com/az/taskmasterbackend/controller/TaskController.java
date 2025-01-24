@@ -1,7 +1,7 @@
 package com.az.taskmasterbackend.controller;
 
-import com.az.taskmasterbackend.dto.ErrorResponse;
-import com.az.taskmasterbackend.entity.Task;
+import com.az.taskmasterbackend.model.dto.ErrorResponse;
+import com.az.taskmasterbackend.model.entity.Task;
 import com.az.taskmasterbackend.service.TaskService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

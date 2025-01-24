@@ -1,8 +1,8 @@
 package com.az.taskmasterbackend.controller;
 
-import com.az.taskmasterbackend.dto.AuthRequest;
-import com.az.taskmasterbackend.dto.ErrorResponse;
-import com.az.taskmasterbackend.dto.RefreshTokenRequest;
+import com.az.taskmasterbackend.model.dto.AuthRequest;
+import com.az.taskmasterbackend.model.dto.ErrorResponse;
+import com.az.taskmasterbackend.model.dto.RefreshTokenRequest;
 import com.az.taskmasterbackend.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -23,29 +23,31 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody AuthRequest authRequest) {
-        return authService.register(authRequest);
+        if (authRequest.email() == null || authRequest.password() == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("Registration failed: Missing fields"));
+        }
+        return ResponseEntity.ok(authService.register(authRequest));
     }
 
+    //TODO: delete old refresh tokens from db
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest authRequest) {
         if (authRequest.email() == null || authRequest.password() == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("Invalid request: Missing fields"));
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("Login failed: Missing fields"));
         }
-        try {
-            return ResponseEntity.ok(authService.login(authRequest));
-        } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Login failed: Invalid credentials"));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("An unexpected error occurred"));
-        }
+        return ResponseEntity.ok(authService.login(authRequest));
     }
 
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest refreshTokenRequest) {
+        if (refreshTokenRequest.refreshToken() == null) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("Failed to refresh Token: Missing fields"));
+        }
         try {
             return ResponseEntity.ok(authService.refreshToken(refreshTokenRequest));
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Error refreshing token: " + e.getMessage()));
+        }
+        catch (IllegalArgumentException ex) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse(ex.getMessage()));
         }
     }
 
