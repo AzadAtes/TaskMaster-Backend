@@ -13,8 +13,13 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(TokenRefreshException.class)
-    public ResponseEntity<?> handleTokenRefreshException(TokenRefreshException ex) {
+    @ExceptionHandler(MissingFieldsException.class)
+    public ResponseEntity<?> handleMissingFieldsException(MissingFieldsException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(ex.getMessage() + ": Missing fields"));
+    }
+
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<?> handleTokenRefreshException(InvalidTokenException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse(ex.getMessage()));
     }
 

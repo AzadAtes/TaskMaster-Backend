@@ -2,6 +2,7 @@ package com.az.taskmasterbackend.util;
 
 import io.jsonwebtoken.*;
 import jakarta.annotation.PostConstruct;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,33 +26,37 @@ public class JwtUtil {
     private static final Logger logger = LoggerFactory.getLogger(JwtUtil.class);
 
     @Value("${security.jwt.secret}")
-    private String jwtSecret;
+    private String secret;
 
     @Value("${security.jwt.expiration-ms}")
-    private Long jwtExpirationInMs;
+    private Long accessTokenExpirationInMs;
 
+    @Getter
     @Value("${security.jwt.refresh-expiration-ms}")
-    private Long jwtRefreshExpirationInMs;
+    private Long refreshTokenExpirationInMs;
 
     private Key key;
 
     @PostConstruct
     public void init() {
-        byte[] keys = Base64.getDecoder().decode(jwtSecret.getBytes());
+        byte[] keys = Base64.getDecoder().decode(secret.getBytes());
         key = Keys.hmacShaKeyFor(keys);
     }
 
-    public String generateToken(Authentication authentication) {
+    public String generateAccessToken(Authentication authentication) {
 
-        String username = authentication.getName();
         Date now = new Date();
-        Date expirationDate = new Date(now.getTime() + jwtExpirationInMs);
+        Date expirationDate = new Date(now.getTime() + accessTokenExpirationInMs);
 
         return Jwts.builder()
-                .subject(username)
+                .subject(authentication.getName())
                 .issuedAt(now)
                 .expiration(expirationDate)
-                .claims(Map.of("roles", authentication.getAuthorities().stream().map(GrantedAuthority::getAuthority).collect(Collectors.toList())))
+                .claims(Map.of("roles", authentication
+                        .getAuthorities()
+                        .stream()
+                        .map(GrantedAuthority::getAuthority)
+                        .collect(Collectors.toList())))
                 .signWith(key)
                 .compact();
     }
@@ -59,12 +64,12 @@ public class JwtUtil {
     public String generateRefreshToken(String username) {
 
         Date now = new Date();
-        Date expirationDate = new Date(now.getTime() + jwtRefreshExpirationInMs);
+        Date expirationDate = new Date(now.getTime() + refreshTokenExpirationInMs);
 
         return Jwts.builder()
                 .subject(username)
-                .setIssuedAt(now)
-                .setExpiration(expirationDate)
+                .issuedAt(now)
+                .expiration(expirationDate)
                 .signWith(key)
                 .compact();
     }
@@ -79,7 +84,7 @@ public class JwtUtil {
         return claims.getSubject();
     }
 
-    public boolean validateToken(String token) {
+    public boolean isValidToken(String token) {
         try {
             Jwts.parser()
                     .verifyWith((SecretKey) key)
@@ -96,9 +101,5 @@ public class JwtUtil {
             logger.error("JWT claims string is empty: {}", e.getMessage());
         }
         return false;
-    }
-
-    public long getRefreshExpirationInMs() {
-        return jwtRefreshExpirationInMs;
     }
 }

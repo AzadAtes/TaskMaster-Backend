@@ -1,6 +1,7 @@
 package com.az.taskmasterbackend.service;
 
-import com.az.taskmasterbackend.exception.TokenRefreshException;
+import com.az.taskmasterbackend.exception.MissingFieldsException;
+import com.az.taskmasterbackend.exception.InvalidTokenException;
 import com.az.taskmasterbackend.model.dto.AuthRequest;
 import com.az.taskmasterbackend.model.dto.AuthResponse;
 import com.az.taskmasterbackend.model.dto.ErrorResponse;
@@ -12,18 +13,18 @@ import com.az.taskmasterbackend.repository.UserRepository;
 import com.az.taskmasterbackend.util.JwtUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Date;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -38,58 +39,63 @@ public class AuthService {
 
     public AuthResponse login(AuthRequest authRequest) {
 
-        // TODO: Don't save a token to DB if already logged id
-        Authentication authentication = authenticationManager.authenticate(
+        if (authRequest.email() == null || authRequest.password() == null) {
+            throw new MissingFieldsException("Login failed");
+        }
+
+        var authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(authRequest.email(), authRequest.password()));
 
-        User userDetails = (User) authentication.getPrincipal();
-        String jwt = jwtUtil.generateToken(authentication);
+        var userDetails = (User) authentication.getPrincipal();
+        var accessToken = jwtUtil.generateAccessToken(authentication);
 
-        String refreshToken = jwtUtil.generateRefreshToken(userDetails.getUsername());
-        RefreshToken refreshTokenEntity = new RefreshToken(
+        var refreshToken = jwtUtil.generateRefreshToken(userDetails.getUsername());
+        var refreshTokenEntity = new RefreshToken(
                 refreshToken,
-                Date.from(Instant.now().plusMillis(jwtUtil.getRefreshExpirationInMs())),
+                Date.from(Instant.now().plusMillis(jwtUtil.getRefreshTokenExpirationInMs())),
                 userDetails
         );
 
         refreshTokenRepository.save(refreshTokenEntity);
-        return new AuthResponse(jwt, refreshToken);
+        return new AuthResponse(accessToken, refreshToken);
     }
 
     public AuthResponse refreshToken(RefreshTokenRequest refreshTokenRequest) {
-        String refreshToken = refreshTokenRequest.refreshToken();
-        Optional<RefreshToken> refreshTokenFromDb = refreshTokenRepository.findByToken(refreshToken);
-        if (
-            refreshTokenFromDb.isEmpty()
-            || refreshTokenFromDb.get().getExpirationDate().before(new Date())
-            || refreshTokenFromDb.get().isRevoked())
-        {
-            throw new TokenRefreshException("Invalid refresh token");
-        }
-        RefreshToken validRefreshToken = refreshTokenFromDb.get();
-        User userDetails = validRefreshToken.getUser();
 
-        String newJwt = jwtUtil.generateToken(new UsernamePasswordAuthenticationToken(
+        if (refreshTokenRequest.refreshToken() == null) {
+            throw new MissingFieldsException("Failed to refresh Token");
+        }
+
+        Optional<RefreshToken> refreshTokenFromDb = refreshTokenRepository.findByToken(refreshTokenRequest.refreshToken());
+        if ( refreshTokenFromDb.isEmpty()
+                || refreshTokenFromDb.get().isRevoked()
+                || !jwtUtil.isValidToken(refreshTokenRequest.refreshToken()))
+        {
+            throw new InvalidTokenException("Invalid refresh token");
+        }
+
+        var refreshTokenEntity = refreshTokenFromDb.get();
+        var userDetails = refreshTokenEntity.getUser();
+        var refreshToken = jwtUtil.generateRefreshToken(userDetails.getUsername());
+
+        refreshTokenEntity.setToken(refreshToken);
+        refreshTokenEntity.setExpirationDate(Date.from(Instant.now().plusMillis(jwtUtil.getRefreshTokenExpirationInMs())));
+        refreshTokenRepository.save(refreshTokenEntity);
+
+        var accessToken = jwtUtil.generateAccessToken(new UsernamePasswordAuthenticationToken(
                 userDetails, null, userDetails.getAuthorities()));
 
-        String newRefreshToken = jwtUtil.generateRefreshToken(userDetails.getUsername());
-
-        validRefreshToken.setToken(newRefreshToken);
-        validRefreshToken.setExpirationDate(Date.from(Instant.now().plusMillis(jwtUtil.getRefreshExpirationInMs())));
-
-        refreshTokenRepository.save(validRefreshToken);
-
-        return new AuthResponse(newJwt, newRefreshToken);
+        return new AuthResponse(accessToken, refreshToken);
     }
 
     public ResponseEntity<?> logout(HttpServletRequest httpServletRequest) {
         try {
-            String authHeader = httpServletRequest.getHeader("Authorization");
+            var authHeader = httpServletRequest.getHeader("Authorization");
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                String jwt = authHeader.substring(7);
-                String username = jwtUtil.getUsernameFromToken(jwt);
+                var token = authHeader.substring(7);
+                var username = jwtUtil.getUsernameFromToken(token);
 
-                List<RefreshToken> refreshTokens = refreshTokenRepository.findAllByUser_Username(username);
+                var refreshTokens = refreshTokenRepository.findAllByUser_Username(username);
                 for (RefreshToken refreshToken : refreshTokens) {
                     refreshToken.setRevoked(true);
                 }
@@ -103,14 +109,17 @@ public class AuthService {
     }
 
     public ResponseEntity<?> register(AuthRequest authRequest) {
-        try {
-            User user = new User();
-            user.setUsername(authRequest.email());
-            user.setPassword(passwordEncoder.encode(authRequest.password()));
-            user = userRepository.save(user);
-            return ResponseEntity.ok(user);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("User already exists"));
+        if (authRequest.email() == null || authRequest.password() == null) {
+            throw new MissingFieldsException("Registration failed");
         }
+        var user = new User();
+        user.setUsername(authRequest.email());
+        user.setPassword(passwordEncoder.encode(authRequest.password()));
+        try {
+            user = userRepository.save(user);
+        } catch (DataIntegrityViolationException ex) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("User already exists: " + ex));
+        }
+        return ResponseEntity.ok(user);
     }
 }
