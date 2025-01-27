@@ -10,20 +10,20 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 @ControllerAdvice
-public class GlobalExceptionHandler {
-
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<?> handleHttpMessageNotReadable() {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("request body is missing or malformed"));
-    }
+public class ControllerExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<?> handleBadCredentialsException() {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse("Bad credentials"));
     }
 
-//    @ExceptionHandler(HttpMessageNotWritableException.class)
-//    public ResponseEntity<?> handleHttpMessageNotWritableException() {
-//        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("request body is missing or malformed"));
-//    }
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<?> handleHttpMessageNotReadable() {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("Request body is missing or malformed"));
+    }
+
+    @ExceptionHandler(HttpMessageNotWritableException.class)
+    public ResponseEntity<?> handleHttpMessageNotWritableException() {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("Response body is malformed"));
+    }
 }
