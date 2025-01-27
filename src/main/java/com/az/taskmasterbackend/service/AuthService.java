@@ -11,18 +11,14 @@ import com.az.taskmasterbackend.model.entity.User;
 import com.az.taskmasterbackend.repository.RefreshTokenRepository;
 import com.az.taskmasterbackend.repository.UserRepository;
 import com.az.taskmasterbackend.util.JwtUtil;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
 import java.time.Instant;
 import java.util.Date;
 import java.util.Optional;
@@ -55,8 +51,8 @@ public class AuthService {
                 Date.from(Instant.now().plusMillis(jwtUtil.getRefreshTokenExpirationInMs())),
                 userDetails
         );
-
         refreshTokenRepository.save(refreshTokenEntity);
+
         return new AuthResponse(accessToken, refreshToken);
     }
 
@@ -88,9 +84,10 @@ public class AuthService {
         return new AuthResponse(accessToken, refreshToken);
     }
 
-    public ResponseEntity<?> logout(HttpServletRequest httpServletRequest) {
+    //TODO: create user dto and return it on successful registration and logout
+    //      OR simply return a message
+    public ResponseEntity<?> logout(String authHeader) {
         try {
-            var authHeader = httpServletRequest.getHeader("Authorization");
             if (authHeader != null && authHeader.startsWith("Bearer ")) {
                 var token = authHeader.substring(7);
                 var username = jwtUtil.getUsernameFromToken(token);
@@ -100,9 +97,10 @@ public class AuthService {
                     refreshToken.setRevoked(true);
                 }
                 refreshTokenRepository.saveAll(refreshTokens);
+                return ResponseEntity.ok("Logged out successfully.");
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("Token invalid or missing."));
             }
-
-            return ResponseEntity.ok("Logged out successfully.");
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new ErrorResponse("Logout failed."));
         }
@@ -110,7 +108,7 @@ public class AuthService {
 
     public ResponseEntity<?> register(AuthRequest authRequest) {
         if (authRequest.email() == null || authRequest.password() == null) {
-            throw new MissingFieldsException("Registration failed");
+            throw new MissingFieldsException("Registration failed.");
         }
         var user = new User();
         user.setUsername(authRequest.email());
