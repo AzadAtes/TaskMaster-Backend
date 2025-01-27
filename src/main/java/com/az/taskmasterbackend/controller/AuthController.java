@@ -14,6 +14,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
+
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
@@ -29,7 +32,15 @@ public class AuthController {
         return ResponseEntity.ok(authService.register(authRequest));
     }
 
-    //TODO: delete old refresh tokens from db
+//    //TODO: delete old refresh tokens from db
+//    @PostMapping("/login")
+//    public ResponseEntity<?> login(@RequestBody AuthRequest authRequest) {
+//        if (authRequest.email() == null || authRequest.password() == null) {
+//            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ErrorResponse("Login failed: Missing fields"));
+//        }
+//        return ResponseEntity.ok(authService.login(authRequest));
+//    }
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody AuthRequest authRequest) {
         if (authRequest.email() == null || authRequest.password() == null) {

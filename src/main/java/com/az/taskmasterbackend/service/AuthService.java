@@ -1,5 +1,6 @@
 package com.az.taskmasterbackend.service;
 
+import com.az.taskmasterbackend.exception.TokenRefreshException;
 import com.az.taskmasterbackend.model.dto.AuthRequest;
 import com.az.taskmasterbackend.model.dto.AuthResponse;
 import com.az.taskmasterbackend.model.dto.ErrorResponse;
@@ -63,7 +64,7 @@ public class AuthService {
             || refreshTokenFromDb.get().getExpirationDate().before(new Date())
             || refreshTokenFromDb.get().isRevoked())
         {
-            throw new IllegalArgumentException("Invalid refresh token");
+            throw new TokenRefreshException("Invalid refresh token");
         }
         RefreshToken validRefreshToken = refreshTokenFromDb.get();
         User userDetails = validRefreshToken.getUser();
