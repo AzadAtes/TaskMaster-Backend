@@ -10,14 +10,12 @@ import com.az.taskmasterbackend.repository.RefreshTokenRepository;
 import com.az.taskmasterbackend.repository.UserRepository;
 import com.az.taskmasterbackend.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.Date;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -31,101 +29,96 @@ public class AuthService {
 
     public UserResponse register(AuthRequest authRequest) {
 
-        var username = authRequest.email();
+        var username = authRequest.username();
         var password = authRequest.password();
 
         if (username == null || password == null) {
-            throw new MissingFieldsException("Registration failed.");
+            throw new MissingFieldsException("Registration failed");
         }
 
         userRepository.findByUsername(username).ifPresent(user -> {
-            throw new UserAlreadyExistsException("User already exists.");
+            throw new UserAlreadyExistsException("Registration failed");
         });
 
-        var user = new User();
-        user.setUsername(authRequest.email());
-        user.setPassword(passwordEncoder.encode(authRequest.password()));
-        user = userRepository.save(user);
+        var userEntity = new User();
+        userEntity.setUsername(username);
+        userEntity.setPassword(passwordEncoder.encode(password));
+        userEntity = userRepository.save(userEntity);
 
-        return new UserResponse(user.getUsername(), "Registered successfully.");
+        return new UserResponse(userEntity.getUsername(), "Registration successful");
     }
 
     public AuthResponse login(AuthRequest authRequest) {
+        var username = authRequest.username();
+        var password = authRequest.password();
 
-        if (authRequest.email() == null || authRequest.password() == null) {
+        if (username == null || password == null) {
             throw new MissingFieldsException("Login failed");
         }
 
         var authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(authRequest.email(), authRequest.password()));
-
-        var userDetails = (User) authentication.getPrincipal();
+                new UsernamePasswordAuthenticationToken(username, password));
         var accessToken = jwtUtil.generateAccessToken(authentication);
 
+        var userDetails = (User) authentication.getPrincipal();
         var refreshToken = jwtUtil.generateRefreshToken(userDetails.getUsername());
+
         var refreshTokenEntity = new RefreshToken(
                 refreshToken,
                 Date.from(Instant.now().plusMillis(jwtUtil.getRefreshTokenExpirationInMs())),
                 userDetails
         );
         refreshTokenRepository.save(refreshTokenEntity);
-
         return new AuthResponse(accessToken, refreshToken);
     }
 
     public AuthResponse refreshToken(RefreshTokenRequest refreshTokenRequest) {
+        var refreshToken = refreshTokenRequest.refreshToken();
+        if (refreshToken == null) throw new MissingFieldsException("Failed to refresh Token");
 
-        if (refreshTokenRequest.refreshToken() == null) {
-            throw new MissingFieldsException("Failed to refresh Token");
+        var refreshTokenEntity = refreshTokenRepository.findByToken(refreshToken)
+                .orElseThrow(() -> new InvalidTokenException("Failed to refresh Token"));
+
+        if (refreshTokenEntity.isRevoked() || !jwtUtil.isValidToken(refreshToken)) {
+            throw new InvalidTokenException("Failed to refresh Token");
         }
 
-        Optional<RefreshToken> refreshTokenFromDb = refreshTokenRepository.findByToken(refreshTokenRequest.refreshToken());
-        if ( refreshTokenFromDb.isEmpty()
-                || refreshTokenFromDb.get().isRevoked()
-                || !jwtUtil.isValidToken(refreshTokenRequest.refreshToken()))
-        {
-            throw new InvalidTokenException("Invalid refresh token");
-        }
-
-        var refreshTokenEntity = refreshTokenFromDb.get();
         var userDetails = refreshTokenEntity.getUser();
-        var refreshToken = jwtUtil.generateRefreshToken(userDetails.getUsername());
+        var newRefreshToken = jwtUtil.generateRefreshToken(userDetails.getUsername());
 
-        refreshTokenEntity.setToken(refreshToken);
+        refreshTokenEntity.setToken(newRefreshToken);
         refreshTokenEntity.setExpirationDate(Date.from(Instant.now().plusMillis(jwtUtil.getRefreshTokenExpirationInMs())));
         refreshTokenRepository.save(refreshTokenEntity);
 
-        var accessToken = jwtUtil.generateAccessToken(new UsernamePasswordAuthenticationToken(
-                userDetails, null, userDetails.getAuthorities()));
+        var accessToken = jwtUtil.generateAccessToken(
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities())
+        );
 
-        return new AuthResponse(accessToken, refreshToken);
+        return new AuthResponse(accessToken, newRefreshToken);
     }
 
+
     public UserResponse logout(String authHeader) {
-
         var token = jwtUtil.getTokenFromAuthHeader(authHeader);
-        var username = jwtUtil.getUsernameFromToken(token);
-        var refreshToken = refreshTokenRepository.findByToken(token);
+        if (token == null) throw new InvalidTokenException("Failed to logout");
 
-        if (refreshToken.isEmpty()) {
-            throw new InvalidTokenException("Invalid token.");
-        }
-        refreshToken.get().setRevoked(true);
-        refreshTokenRepository.save(refreshToken.get());
+        var refreshToken = refreshTokenRepository.findByToken(token)
+                .orElseThrow(() -> new InvalidTokenException("Failed to logout"));
 
-        return new UserResponse(username, "Logged out successfully.");
+        refreshToken.setRevoked(true);
+        refreshTokenRepository.save(refreshToken);
+        return new UserResponse(jwtUtil.getUsernameFromToken(token), "Logout successful");
     }
 
     public UserResponse logoutGlobally(String authHeader) {
 
-        var token = jwtUtil.getTokenFromAuthHeader(authHeader);
-        var username = jwtUtil.getUsernameFromToken(token);
+        String token = jwtUtil.getTokenFromAuthHeader(authHeader);
+        if (token == null) throw new InvalidTokenException("Failed to logout");
 
-        var refreshTokens = refreshTokenRepository.findAllByUser_Username(username);
-        for (RefreshToken refreshToken : refreshTokens) {
-            refreshToken.setRevoked(true);
-        }
-        refreshTokenRepository.saveAll(refreshTokens);
-        return new UserResponse(username, "Logged out successfully.");
+        String username = jwtUtil.getUsernameFromToken(token);
+        refreshTokenRepository.findAllByUser_Username(username)
+                .forEach(refreshToken -> refreshToken.setRevoked(true));
+
+        return new UserResponse(username, "Global logout successful.");
     }
 }

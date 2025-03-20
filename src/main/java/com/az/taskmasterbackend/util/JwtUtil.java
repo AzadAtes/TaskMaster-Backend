@@ -109,9 +109,8 @@ public class JwtUtil {
     }
 
     public String getTokenFromAuthHeader(String authHeader) {
-
-        if (!authHeader.startsWith("Bearer ")) {
-            throw new InvalidTokenException("Token invalid or missing.");
+        if (!StringUtils.hasText(authHeader) || !authHeader.startsWith("Bearer ")) {
+            return null;
         }
         return authHeader.substring(7);
     }

@@ -7,5 +7,4 @@ CREATE TABLE `refresh_token` (
                                  CONSTRAINT `fk_refresh_token_user` FOREIGN KEY (`user_id`) REFERENCES `user`(`id`) ON DELETE CASCADE
 );
 
--- Indexes for performance
 CREATE INDEX `idx_refresh_token_user_id` ON `refresh_token` (`user_id`);
